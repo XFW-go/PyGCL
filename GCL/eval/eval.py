@@ -54,6 +54,7 @@ class BaseEvaluator(ABC):
         for key in ['train', 'test', 'valid']:
             assert key in split
 
+        print('Base evaluator')
         result = self.evaluate(x, y, split)
         return result
 

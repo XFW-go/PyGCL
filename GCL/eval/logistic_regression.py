@@ -3,6 +3,7 @@ from tqdm import tqdm
 from torch import nn
 from torch.optim import Adam
 from sklearn.metrics import f1_score
+from abc import ABC, abstractmethod
 
 from GCL.eval import BaseEvaluator
 
@@ -19,12 +20,13 @@ class LogisticRegression(nn.Module):
 
 
 class LREvaluator(BaseEvaluator):
-    def __init__(self, num_epochs: int = 5000, learning_rate: float = 0.01,
-                 weight_decay: float = 0.0, test_interval: int = 20):
+    def __init__(self, num_epochs: int = 4000, learning_rate: float = 0.01,
+                 weight_decay: float = 0.0, test_interval: int = 1000):
         self.num_epochs = num_epochs
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.test_interval = test_interval
+        print('INIT here')
 
     def evaluate(self, x: torch.FloatTensor, y: torch.LongTensor, split: dict):
         device = x.device
@@ -60,6 +62,7 @@ class LREvaluator(BaseEvaluator):
                     y_pred = classifier(x[split['test']]).argmax(-1).detach().cpu().numpy()
                     test_micro = f1_score(y_test, y_pred, average='micro')
                     test_macro = f1_score(y_test, y_pred, average='macro')
+                    print(test_micro)
 
                     y_val = y[split['valid']].detach().cpu().numpy()
                     y_pred = classifier(x[split['valid']]).argmax(-1).detach().cpu().numpy()
@@ -73,8 +76,13 @@ class LREvaluator(BaseEvaluator):
 
                     pbar.set_postfix({'best test F1Mi': best_test_micro, 'F1Ma': best_test_macro})
                     pbar.update(self.test_interval)
-
-        return {
+        
+        print('LREvaluator FINISH HERE')
+        y_soft = output_fn(classifier(x))
+        
+        dict_out = {
             'micro_f1': best_test_micro,
             'macro_f1': best_test_macro
         }
+
+        return dict_out, y_soft
