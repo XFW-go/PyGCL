@@ -95,15 +95,10 @@ def train_student(y_soft, data, mlp, mlp_optimizer):
     mlp.train()
     mlp_optimizer.zero_grad()
     out = mlp(data.x)
-
-    # For WikiCS dataset
-    #tmp = torch.squeeze(torch.split(data.train_mask,[1,19],1)[0])
-    #loss1 = F.cross_entropy(out[tmp], data.y[tmp])
     loss1 = F.cross_entropy(out[data.train_mask], data.y[data.train_mask])
     loss2 = F.kl_div(out.log_softmax(dim=-1), y_soft, reduction='batchmean',
                      log_target=True)
     loss = args.lamb * loss1 + (1 - args.lamb) * loss2
-    #loss = (1 - args.lamb) * loss2
     loss.backward(retain_graph=True)
     mlp_optimizer.step()
     
@@ -116,28 +111,11 @@ def test_student(mlp):
     accs = []
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
         accs.append(int((pred[mask] == data.y[mask]).sum()) / int(mask.sum()))
-    ## For WikiCS 
-    '''
-    flag = 0
-    for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-        flag+=1
-        if flag<3:
-            #tmp = torch.squeeze(torch.split(mask,[1,19],1)[0])
-            tmp = mask[:, split_n]
-        else:
-            tmp = mask
-        accs.append(int((pred[tmp] == data.y[tmp]).sum()) / int(mask.sum()))
-    '''
     return accs
 # ------------ For students 
 
 def main():
     device = torch.device('cuda')
-    #path = osp.join(osp.expanduser('~'), 'datasets', 'WikiCS')
-    #dataset = WikiCS(path, transform=T.NormalizeFeatures())
-    #path = osp.join(osp.expanduser('~'), 'datasets')
-    #dataset = Planetoid(path, name='Cora', transform=T.NormalizeFeatures())
-    #data = dataset[0].to(device)
     acc_teacher = []
     acc_student = []
     std_teacher = 0
@@ -171,10 +149,7 @@ def main():
         print(f'(E): Best test F1Mi={test_result["micro_f1"]:.4f}, Acc={test_result["acc"]:.4f}, F1Ma={test_result["macro_f1"]:.4f}')
         acc_teacher.append(test_result["acc"])
         
-        # Start training a student
-        #with torch.no_grad():  # Obtain soft labels from the GNN:
-        #    y_soft = gnn(data.x, data.edge_index).log_softmax(dim=-1)
-            
+        # Start training a student            
         print('Training Student MLP:')
         best_val_acc = -1
         best_test_acc = -1
@@ -199,9 +174,9 @@ def main():
     std_teacher = sqrt(std_teacher)
     for i in range(times_for_average):
         std_student += (acc_student[i]-student_average)**2
-    std_student = sqrt(std_student)
+    std_student = sqrt(std_student/times_for_average)
+    print(dataset_name)
     print('training finished for: ', times_for_average, ' times')
-    #print(dataset_name)
     print('average teacher acc: ', teacher_average, ', and std: ', std_teacher)
     print('average student acc: ', student_average, ', and std: ', std_student)
 

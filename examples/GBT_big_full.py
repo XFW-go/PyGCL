@@ -25,7 +25,7 @@ parser.add_argument('--lamb', type=float, default=0.0,
 args = parser.parse_args()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-times_for_average = 3
+times_for_average = 10
 
 '''
 dataset_name = 'CiteSeer'
@@ -33,6 +33,7 @@ path = osp.join(osp.expanduser('~'), 'datasets')
 dataset = Planetoid(path, name=dataset_name, transform=T.NormalizeFeatures())
 data = dataset[0].to(device)
 '''
+dataset_name = 'WikiCS'
 path = osp.join(osp.expanduser('~'), 'datasets', 'WikiCS')
 dataset = WikiCS(path, transform=T.NormalizeFeatures())
 data = dataset[0].to(device)
@@ -97,14 +98,10 @@ def train_student(y_soft, data, mlp, mlp_optimizer,split_n):
     mlp_optimizer.zero_grad()
     out = mlp(data.x)
 
-    # For WikiCS dataset
-    #tmp = torch.squeeze(torch.split(data.train_mask,[1,19],1)[0])
-    #loss1 = F.cross_entropy(out[tmp], data.y[tmp])
     loss1 = F.cross_entropy(out[data.train_mask[:,split_n]], data.y[data.train_mask[:,split_n]])
     loss2 = F.kl_div(out.log_softmax(dim=-1), y_soft, reduction='batchmean',
                      log_target=True)
     loss = args.lamb * loss1 + (1 - args.lamb) * loss2
-    #loss = (1 - args.lamb) * loss2
     loss.backward(retain_graph=True)
     mlp_optimizer.step()
     
@@ -116,17 +113,13 @@ def test_student(mlp, split_n):
     pred = mlp(data.x).argmax(dim=-1)
     accs = []
     #for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-    #    accs.append(int((pred[mask] == data.y[mask]).sum()) / int(mask.sum()))
-    ## For WikiCS 
+    #    accs.append(int((pred[mask] == data.y[mask]).sum()) / int(mask.sum())) 
     
     flag = 0
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
         flag+=1
-        if flag<3:
-            #tmp = torch.squeeze(torch.split(mask,[1,19],1)[0])
-            tmp = mask[:, split_n]
-        else:
-            tmp = mask
+        if flag<3: tmp = mask[:, split_n]
+        else: tmp = mask
         accs.append(int((pred[tmp] == data.y[tmp]).sum()) / int(tmp.sum()))
     
     return accs
@@ -134,107 +127,80 @@ def test_student(mlp, split_n):
 
 def main():
     device = torch.device('cuda')
-    #path = osp.join(osp.expanduser('~'), 'datasets', 'WikiCS')
-    #dataset = WikiCS(path, transform=T.NormalizeFeatures())
-    #path = osp.join(osp.expanduser('~'), 'datasets')
-    #dataset = Planetoid(path, name='Cora', transform=T.NormalizeFeatures())
-    #data = dataset[0].to(device)
-    #acc_teacher = []
-    #acc_student = []
-    #std_teacher = 0
-    #std_student = 0
-    best_pe1 = 0
-    best_pf1 = 0
-    best_teacher_ave = -1
-    for pe1 in range(5):
-        for pf1 in range(5):
-            test_acc_sum = 0
-            print('Start Training with (pe1=%f, pf1=%f)'%(pe1,pf1))
-            print('--------------------------------------------')
-            for n in range(times_for_average):                    
-                for split_n in range(20):                          
-                    mlp = MLP([dataset.num_node_features, 64, dataset.num_classes], dropout=0.5).to(device)
-                    mlp_optimizer = torch.optim.Adam(mlp.parameters(), lr=0.01, weight_decay=5e-4)
-                    
-                    aug1 = A.Compose([A.EdgeRemoving(pe=pe1*0.1), A.FeatureMasking(pf=pf1*0.1)])
-                    aug2 = A.Compose([A.EdgeRemoving(pe=pe1*0.1), A.FeatureMasking(pf=pf1*0.1)])
-
-                    gconv = GConv(input_dim=dataset.num_features, hidden_dim=256).to(device)
-                    encoder_model = Encoder(encoder=gconv, augmentor=(aug1, aug2)).to(device)
-                    contrast_model = WithinEmbedContrast(loss=L.BarlowTwins()).to(device)
-
-                    optimizer = Adam(encoder_model.parameters(), lr=5e-4)
-                    scheduler = LinearWarmupCosineAnnealingLR(
-                        optimizer=optimizer,
-                        warmup_epochs=4,
-                        max_epochs=10)
-
-                    with tqdm(total=10, desc='(T)') as pbar:
-                        for epoch in range(1, 11):
-                            loss = train(encoder_model, contrast_model, data, optimizer)
-                            scheduler.step()
-                            pbar.set_postfix({'loss': loss})
-                            pbar.update()
-                    
-                    print('Pretrain finished')
-                    test_result, y_soft = test(encoder_model, data, split_n)
-                    print(f'(E): Best test F1Mi={test_result["micro_f1"]:.4f}, Acc={test_result["acc"]:.4f}, F1Ma={test_result["macro_f1"]:.4f}')
-                    test_acc_sum += test_result["acc"]
-                    #acc_teacher_split += test_result["acc"]
-                    #acc_teacher.append(test_result["acc"])
-                    
-                    # Start training a student
-                    #with torch.no_grad():  # Obtain soft labels from the GNN:
-                    #    y_soft = gnn(data.x, data.edge_index).log_softmax(dim=-1)
-                    '''    
-                    print('Training Student MLP:')
-                    best_val_acc = -1
-                    best_test_acc = -1
-                    for epoch in range(1, 501):
-                        loss = train_student(y_soft, data, mlp, mlp_optimizer, split_n)
-                        if epoch % 20 == 0:
-                            train_acc, val_acc, test_acc = test_student(mlp, split_n)
-                            print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Train: {train_acc:.4f}, '
-                                  f'Val: {val_acc:.4f}, Test: {test_acc:.4f}')
-                            if val_acc > best_val_acc:
-                                best_val_acc = val_acc
-                                best_test_acc = test_acc
-                    acc_student_split += best_test_acc
-                    #acc_student.append(best_test_acc)
-                    '''
-                    del gconv
-                    del mlp
+    acc_teacher = []
+    acc_student = []
+    std_teacher = 0
+    std_student = 0
+    #test_acc_sum = 0
+    for n in range(times_for_average): 
+        test_teacher = 0
+        test_student = 0
+        for split_n in range(20):                          
+            mlp = MLP([dataset.num_node_features, 64, dataset.num_classes], dropout=0.5).to(device)
+            mlp_optimizer = torch.optim.Adam(mlp.parameters(), lr=0.01, weight_decay=5e-4)
             
-            average_for_splits = test_acc_sum/(20.0*times_for_average)
-            print('Finish training with acc= ', average_for_splits)
-            print('-------------------------------------------')
-            if average_for_splits > best_teacher_ave:
-                best_teacher_ave = average_for_splits
-                best_pe1 = pe1
-                best_pf1 = pf1
-    
-    print(best_teacher_ave)
-    print('param = ', best_pe1*0.1, '  ', best_pf1*0.1)
-    
-    with open('../hyperparam.txt', 'a') as f:
-        f.write('Dataset: WikiCS \n')
-        print('Times for average = ', times_for_average, '\n')
-        f.write('best_teacher_test_acc: ', best_teacher_ave, '\n')
-        f.write('pe1=%f, pf1=%f \n' %(best_pe1*0.1, best_pf1*0.1))
-    '''
-    teacher_average = sum(acc_teacher)/times_for_average
-    student_average = sum(acc_student)/times_for_average
+            aug1 = A.Compose([A.EdgeRemoving(pe=0.5), A.FeatureMasking(pf=0.1)])
+            aug2 = A.Compose([A.EdgeRemoving(pe=0.5), A.FeatureMasking(pf=0.1)])
+
+            gconv = GConv(input_dim=dataset.num_features, hidden_dim=256).to(device)
+            encoder_model = Encoder(encoder=gconv, augmentor=(aug1, aug2)).to(device)
+            contrast_model = WithinEmbedContrast(loss=L.BarlowTwins()).to(device)
+
+            optimizer = Adam(encoder_model.parameters(), lr=5e-4)
+            scheduler = LinearWarmupCosineAnnealingLR(
+                optimizer=optimizer,
+                warmup_epochs=4,
+                max_epochs=10)
+
+            with tqdm(total=10, desc='(T)') as pbar:
+                for epoch in range(1, 11):
+                    loss = train(encoder_model, contrast_model, data, optimizer)
+                    scheduler.step()
+                    pbar.set_postfix({'loss': loss})
+                    pbar.update()
+            
+            print('Pretrain finished')
+            test_result, y_soft = test(encoder_model, data, split_n)
+            print(f'(E): Best test F1Mi={test_result["micro_f1"]:.4f}, Acc={test_result["acc"]:.4f}, F1Ma={test_result["macro_f1"]:.4f}')
+            test_teacher += test_result["acc"]
+            
+            # Start training a student                
+            print('Training Student MLP:')
+            best_val_acc = -1
+            best_test_acc = -1
+            for epoch in range(1, 501):
+                loss = train_student(y_soft, data, mlp, mlp_optimizer, split_n)
+                if epoch % 20 == 0:
+                    train_acc, val_acc, test_acc = test_student(mlp, split_n)
+                    print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Train: {train_acc:.4f}, '
+                          f'Val: {val_acc:.4f}, Test: {test_acc:.4f}')
+                    if val_acc > best_val_acc:
+                        best_val_acc = val_acc
+                        best_test_acc = test_acc
+            test_student += best_test_acc
+            
+            del gconv
+            del mlp
+            
+        test_teacher = test_teacher/20
+        test_student = test_student/20
+        acc_teacher.append(test_teacher)
+        acc_student.append(test_student)
+
+    teacher_average = sum(acc_teacher)/(times_for_average)
+    student_average = sum(acc_student)/(times_for_average)
     for i in range(times_for_average):
         std_teacher += (acc_teacher[i]-teacher_average)**2
     std_teacher = sqrt(std_teacher)
     for i in range(times_for_average):
         std_student += (acc_student[i]-student_average)**2
-    std_student = sqrt(std_student)
+    std_student = sqrt(std_student/(times_for_average))
+    
+    print(dataset_name)
     print('training finished for: ', times_for_average, ' times')
-    #print(dataset_name)
     print('average teacher acc: ', teacher_average, ', and std: ', std_teacher)
     print('average student acc: ', student_average, ', and std: ', std_student)
-    '''
+    
 
 if __name__ == '__main__':
     main()
