@@ -134,11 +134,11 @@ def main():
         optimizer = Adam(encoder_model.parameters(), lr=5e-4)
         scheduler = LinearWarmupCosineAnnealingLR(
             optimizer=optimizer,
-            warmup_epochs=4,
-            max_epochs=10)
+            warmup_epochs=100,
+            max_epochs=1000)
 
-        with tqdm(total=10, desc='(T)') as pbar:
-            for epoch in range(1, 11):
+        with tqdm(total=1000, desc='(T)') as pbar:
+            for epoch in range(1, 1001):
                 loss = train(encoder_model, contrast_model, data, optimizer)
                 scheduler.step()
                 pbar.set_postfix({'loss': loss})

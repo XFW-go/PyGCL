@@ -11,8 +11,10 @@ from GCL.eval import get_split#, LREvaluator
 from logistic_regression import LREvaluator
 from GCL.models.contrast_model import WithinEmbedContrast
 from torch_geometric.nn import GCNConv
-from torch_geometric.datasets import WikiCS, Planetoid
+from torch_geometric.datasets import WikiCS, Planetoid, Amazon, Coauthor, PPI
 from pl_bolts.optimizers import LinearWarmupCosineAnnealingLR
+from torch_geometric.data import Data
+from torch_geometric.utils import to_undirected
 
 # glnn part
 import argparse
@@ -22,22 +24,98 @@ from torch_geometric.nn import GCN, MLP
 parser = argparse.ArgumentParser()
 parser.add_argument('--lamb', type=float, default=0.0,
                     help='Balances loss from hard labels and teacher outputs')
+parser.add_argument('--gpu',type=int, default=0,help='which gpu')
 args = parser.parse_args()
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:%d' % args.gpu if torch.cuda.is_available() else 'cpu')
 
-times_for_average = 10
+times_for_average = 5
+dataset_name = ''
+dataset = ''
+data = dict()
 
 '''
 dataset_name = 'CiteSeer'
 path = osp.join(osp.expanduser('~'), 'datasets')
 dataset = Planetoid(path, name=dataset_name, transform=T.NormalizeFeatures())
 data = dataset[0].to(device)
-'''
+
 dataset_name = 'WikiCS'
 path = osp.join(osp.expanduser('~'), 'datasets', 'WikiCS')
 dataset = WikiCS(path, transform=T.NormalizeFeatures())
 data = dataset[0].to(device)
+'''
 
+def read_data(dataset_name):
+    ds_path = osp.join(osp.expanduser('~'), 'datasets', dataset_name)
+    feature_norm = T.NormalizeFeatures()
+    create_masks = T.RandomNodeSplit(
+                        split="train_rest",
+                        num_splits=20,
+                        num_val=0.1,
+                        num_test=0.8,
+                    )
+    if dataset_name == 'WikiCS':    
+        dataset = WikiCS(ds_path, transform=feature_norm)
+        data = dataset[0].to(device)
+    elif dataset_name == "Amazon-CS":
+        dataset = Amazon(
+            root=ds_path,
+            name="computers",
+            transform=feature_norm,
+            pre_transform=create_masks,
+        )
+        data = dataset[0].to(device)
+    elif dataset_name == "Amazon-Photo":
+        dataset = Amazon(
+            root=ds_path,
+            name="photo",
+            transform=feature_norm,
+            pre_transform=create_masks,
+        )
+        data = dataset[0].to(device)
+    elif dataset_name == "Coauthor-CS":
+        dataset = Coauthor(
+            root=ds_path,
+            name="cs",
+            transform=feature_norm,
+            pre_transform=create_masks,
+        )
+        data = dataset[0].to(device)
+    elif dataset_name == "Coauthor-Physics":
+        dataset = Coauthor(
+            root=ds_path,
+            name="physics",
+            transform=feature_norm,
+            pre_transform=create_masks,
+        )
+        data = dataset[0].to(device)
+    elif dataset_name == "ogbn-arxiv":
+        data, dataset = read_ogb_dataset(name=dataset_name, path=ds_path)
+        data.edge_index = to_undirected(data.edge_index, data.num_nodes)
+    elif dataset_name == "ogbn-products":
+        data, dataset = read_ogb_dataset(name=dataset_name, path=ds_path)
+    else:
+        raise ValueError(f"Unknown dataset: {name}")
+    return data, dataset
+
+def read_ogb_dataset(name: str, path: str) -> Data:
+    dataset = PygNodePropPredDataset(root=path, name=name)
+    split_idx = dataset.get_idx_split()
+
+    data = dataset[0]
+
+    data.train_mask = torch.zeros((data.num_nodes,), dtype=torch.bool)
+    data.train_mask[split_idx["train"]] = True
+
+    data.val_mask = torch.zeros((data.num_nodes,), dtype=torch.bool)
+    data.val_mask[split_idx["valid"]] = True
+
+    data.test_mask = torch.zeros((data.num_nodes,), dtype=torch.bool)
+    data.test_mask[split_idx["test"]] = True
+
+    data.y = data.y.squeeze(dim=-1)
+
+    return data, dataset
 
 class GConv(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim):
@@ -87,7 +165,10 @@ def test(encoder_model, data, split_n):
     #split = get_split(num_samples=z.size()[0], train_ratio=0.1, test_ratio=0.8)
     split = dict()
     split['train'] = data.train_mask[:, split_n]
-    split['test'] = data.test_mask
+    if dataset_name=='WikiCS':
+        split['test'] = data.test_mask
+    else:
+        split['test'] = data.test_mask[:, split_n]
     split['valid'] = data.val_mask[:, split_n]
     result, y_soft = LREvaluator()(z, data.y, split)
     return result, y_soft
@@ -149,11 +230,11 @@ def main():
             optimizer = Adam(encoder_model.parameters(), lr=5e-4)
             scheduler = LinearWarmupCosineAnnealingLR(
                 optimizer=optimizer,
-                warmup_epochs=4,
-                max_epochs=10)
+                warmup_epochs=100,
+                max_epochs=1000)
 
-            with tqdm(total=10, desc='(T)') as pbar:
-                for epoch in range(1, 11):
+            with tqdm(total=1000, desc='(T)') as pbar:
+                for epoch in range(1, 1001):
                     loss = train(encoder_model, contrast_model, data, optimizer)
                     scheduler.step()
                     pbar.set_postfix({'loss': loss})
@@ -203,4 +284,6 @@ def main():
     
 
 if __name__ == '__main__':
+    dataset_name = 'Amazon-CS'
+    data, dataset = read_data(dataset_name)
     main()
