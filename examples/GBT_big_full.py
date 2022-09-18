@@ -12,6 +12,7 @@ from logistic_regression import LREvaluator
 from GCL.models.contrast_model import WithinEmbedContrast
 from torch_geometric.nn import GCNConv
 from torch_geometric.datasets import WikiCS, Planetoid, Amazon, Coauthor, PPI
+from ogb.nodeproppred import PygNodePropPredDataset
 from pl_bolts.optimizers import LinearWarmupCosineAnnealingLR
 from torch_geometric.data import Data
 from torch_geometric.utils import to_undirected
@@ -26,6 +27,7 @@ parser.add_argument('--lamb', type=float, default=0.0,
                     help='Balances loss from hard labels and teacher outputs')
 parser.add_argument('--gpu',type=int, default=0,help='which gpu')
 args = parser.parse_args()
+torch.set_num_threads(1)
 device = torch.device('cuda:%d' % args.gpu if torch.cuda.is_available() else 'cpu')
 
 times_for_average = 5
@@ -102,7 +104,7 @@ def read_ogb_dataset(name: str, path: str) -> Data:
     dataset = PygNodePropPredDataset(root=path, name=name)
     split_idx = dataset.get_idx_split()
 
-    data = dataset[0]
+    data = dataset[0].to(device)
 
     data.train_mask = torch.zeros((data.num_nodes,), dtype=torch.bool)
     data.train_mask[split_idx["train"]] = True
@@ -174,7 +176,7 @@ def test(encoder_model, data, split_n):
     return result, y_soft
 
 # For students ------------
-def train_student(y_soft, data, mlp, mlp_optimizer,split_n):
+def train_student(y_soft, data, mlp, mlp_optimizer, split_n):
     mlp.train()
     mlp_optimizer.zero_grad()
     out = mlp(data.x)
@@ -199,15 +201,14 @@ def test_student(mlp, split_n):
     flag = 0
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
         flag+=1
-        if flag<3: tmp = mask[:, split_n]
-        else: tmp = mask
+        if flag==3 and dataset_name=='WikiCS': tmp = mask
+        else: tmp = mask[:, split_n]
         accs.append(int((pred[tmp] == data.y[tmp]).sum()) / int(tmp.sum()))
     
     return accs
 # ------------ For students 
 
 def main():
-    device = torch.device('cuda')
     acc_teacher = []
     acc_student = []
     std_teacher = 0
@@ -215,7 +216,7 @@ def main():
     #test_acc_sum = 0
     for n in range(times_for_average): 
         test_teacher = 0
-        test_student = 0
+        test_stud = 0
         for split_n in range(20):                          
             mlp = MLP([dataset.num_node_features, 64, dataset.num_classes], dropout=0.5).to(device)
             mlp_optimizer = torch.optim.Adam(mlp.parameters(), lr=0.01, weight_decay=5e-4)
@@ -227,14 +228,14 @@ def main():
             encoder_model = Encoder(encoder=gconv, augmentor=(aug1, aug2)).to(device)
             contrast_model = WithinEmbedContrast(loss=L.BarlowTwins()).to(device)
 
-            optimizer = Adam(encoder_model.parameters(), lr=5e-4)
+            optimizer = Adam(encoder_model.parameters(), lr=1e-5)
             scheduler = LinearWarmupCosineAnnealingLR(
                 optimizer=optimizer,
-                warmup_epochs=100,
-                max_epochs=1000)
+                warmup_epochs=10,
+                max_epochs=100)
 
-            with tqdm(total=1000, desc='(T)') as pbar:
-                for epoch in range(1, 1001):
+            with tqdm(total=100, desc='(T)') as pbar:
+                for epoch in range(1, 101):
                     loss = train(encoder_model, contrast_model, data, optimizer)
                     scheduler.step()
                     pbar.set_postfix({'loss': loss})
@@ -258,15 +259,15 @@ def main():
                     if val_acc > best_val_acc:
                         best_val_acc = val_acc
                         best_test_acc = test_acc
-            test_student += best_test_acc
+            test_stud += best_test_acc
             
             del gconv
             del mlp
             
         test_teacher = test_teacher/20
-        test_student = test_student/20
+        test_stud = test_stud/20
         acc_teacher.append(test_teacher)
-        acc_student.append(test_student)
+        acc_student.append(test_stud)
 
     teacher_average = sum(acc_teacher)/(times_for_average)
     student_average = sum(acc_student)/(times_for_average)
@@ -284,6 +285,6 @@ def main():
     
 
 if __name__ == '__main__':
-    dataset_name = 'Amazon-CS'
+    dataset_name = 'Coauthor-Physics'
     data, dataset = read_data(dataset_name)
     main()

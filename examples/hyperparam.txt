@@ -1,0 +1,208 @@
+Dataset: Cora 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.799807
+pe1=0.300000, pf1=0.400000 
+Dataset: Cora 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.797751
+pe1=0.000000, pf1=0.500000 
+Dataset: Cora 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.798416
+pe1=0.200000, pf1=0.500000 
+Dataset: Coauthor-Phy 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.925386
+pe1=0.300000, pf1=0.400000 
+Dataset: Coauthor-Phy 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.928777
+pe1=0.200000, pf1=0.400000 
+Dataset: Coauthor-Phy 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.924722
+pe1=0.000000, pf1=0.500000 
+Dataset: PubMed 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.786005
+pe1=0.000000, pf1=0.500000 
+Dataset: PubMed 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.781960
+pe1=0.300000, pf1=0.500000 
+Dataset: PubMed 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.787760
+pe1=0.100000, pf1=0.500000 
+Dataset: Coauthor-Phy 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.928423
+pe1=0.400000, pf1=0.400000 
+Dataset: Cora 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.798900
+pe1=0.400000, pf1=0.300000 
+Dataset: CiteSeer 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.622137
+pe1=0.000000, pf1=0.500000 
+Dataset: CiteSeer 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.647811
+pe1=0.300000, pf1=0.500000 
+Dataset: CiteSeer 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.642455
+pe1=0.200000, pf1=0.500000 
+Dataset: CiteSeer 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.652983
+pe1=0.500000, pf1=0.500000 
+Dataset: PubMed 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.781444
+pe1=0.400000, pf1=0.300000 
+Dataset: Coauthor-CS 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.901048
+pe1=0.500000, pf1=0.000000 
+Dataset: Coauthor-CS 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.897337
+pe1=0.000000, pf1=0.400000 
+Dataset: Coauthor-CS 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.898147
+pe1=0.300000, pf1=0.100000 
+Dataset: Amazon-CS 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.818745
+pe1=0.500000, pf1=0.200000 
+Dataset: Amazon-CS 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.814931
+pe1=0.100000, pf1=0.200000 
+Dataset: Amazon-Photo 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.917172
+pe1=0.500000, pf1=0.100000 
+Dataset: Coauthor-CS 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.899313
+pe1=0.200000, pf1=0.100000 
+Dataset: Amazon-CS 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.816716
+pe1=0.300000, pf1=0.100000 
+Dataset: Amazon-CS 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.821229
+pe1=0.200000, pf1=0.200000 
+Dataset: Amazon-Photo 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.913715
+pe1=0.000000, pf1=0.200000 
+Dataset: Amazon-Photo 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.913433
+pe1=0.200000, pf1=0.100000 
+Dataset: WikiCS 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.670643
+pe1=0.400000, pf1=0.000000 
+Dataset: WikiCS 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.647308
+pe1=0.100000, pf1=0.000000 
+Dataset: WikiCS 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.659439
+pe1=0.200000, pf1=0.000000 
+Dataset: Amazon-Photo 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.913645
+pe1=0.400000, pf1=0.100000 
+Dataset: WikiCS 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.688655
+pe1=0.500000, pf1=0.000000 
+Dataset: Amazon-CS 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.820482
+pe1=0.000000, pf1=0.300000 
+Dataset: Amazon-CS 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.824538
+pe1=0.200000, pf1=0.200000 
+Dataset: Amazon-CS 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.824373
+pe1=0.300000, pf1=0.100000 
+Dataset: Amazon-CS 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.818657
+pe1=0.400000, pf1=0.300000 
+Dataset: Coauthor-Phy 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.934468
+pe1=0.400000, pf1=0.200000 
+Dataset: Coauthor-Phy 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.932198
+pe1=0.000000, pf1=0.500000 
+Dataset: Coauthor-Phy 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.932979
+pe1=0.100000, pf1=0.400000 
+Dataset: Amazon-CS 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.825159
+pe1=0.000000, pf1=0.300000 
+Dataset: Amazon-CS 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.824393
+pe1=0.300000, pf1=0.100000 
+Dataset: Amazon-CS 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.824994
+pe1=0.100000, pf1=0.300000 
+Dataset: Coauthor-Phy 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.934392
+pe1=0.500000, pf1=0.200000 
+Dataset: Amazon-CS 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.819987
+pe1=0.400000, pf1=0.300000 
+Dataset: Amazon-CS 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.816076
+pe1=0.000000, pf1=0.400000 
+Dataset: Amazon-CS 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.826586
+pe1=0.400000, pf1=0.200000 
+Dataset: Amazon-CS 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.827381
+pe1=0.200000, pf1=0.400000 
+Dataset: Amazon-CS 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.823529
+pe1=0.400000, pf1=0.300000 
+Dataset: Amazon-Photo 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.912886
+pe1=0.000000, pf1=0.300000 
+Dataset: Amazon-Photo 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.917490
+pe1=0.400000, pf1=0.200000 
+Dataset: Amazon-Photo 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.914897
+pe1=0.200000, pf1=0.300000 
+Dataset: Amazon-Photo 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.916749
+pe1=0.500000, pf1=0.200000 

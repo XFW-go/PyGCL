@@ -25,9 +25,10 @@ from torch_geometric.nn import GCN, MLP
 parser = argparse.ArgumentParser()
 parser.add_argument('--lamb', type=float, default=0.0,
                     help='Balances loss from hard labels and teacher outputs')
-parser.add_argument('--pf1', type=int, default=0, help='The value of pf1')
+parser.add_argument('--n_begin', type=int, default=0, help='The start point')
 parser.add_argument('--gpu',type=int, default=0,help='which gpu')
 args = parser.parse_args()
+torch.set_num_threads(1)
 device = torch.device('cuda:%d' % args.gpu if torch.cuda.is_available() else 'cpu')
 
 
@@ -205,46 +206,63 @@ def main():
     best_pe1 = 0
     best_pf1 = 0
     best_teacher_ave = -1
-    for pe1 in range(6):
-#        for pf1 in range(5):
-        pf1 = args.pf1
+    
+    hidden = 256
+    lrr = 1e-4
+    if dataset_name=='WikiCS':
+        lr=5e-4
+    elif dataset_name=='Amazon-CS':
+        lrr=5e-4
+        hidden=128
+    elif dataset_name=='Amazon-Photo':
+        hidden=256
+    elif dataset_name=='Coauthor-CS':
+        lrr=1e-5
+    elif dataset_name=='Coauthor-Physics':
+        hidden=128
+        lrr=1e-5
+    
+    for n_exp in range(9):
+        x = args.n_begin*9+n_exp
+        pe1 = x//6
+        pf1 = x%6
         test_acc_sum = 0
         print('Start Training with (pe1=%f, pf1=%f)'%(pe1,pf1))
         print('--------------------------------------------')
-        for n in range(times_for_average):                    
+        for n in range(times_for_average):
+            aug1 = A.Compose([A.EdgeRemoving(pe=pe1*0.1), A.FeatureMasking(pf=pf1*0.1)])
+            aug2 = A.Compose([A.EdgeRemoving(pe=pe1*0.1), A.FeatureMasking(pf=pf1*0.1)])
+
+            gconv = GConv(input_dim=dataset.num_features, hidden_dim=hidden).to(device) # change hidden-dim
+            encoder_model = Encoder(encoder=gconv, augmentor=(aug1, aug2)).to(device)
+            contrast_model = WithinEmbedContrast(loss=L.BarlowTwins()).to(device)
+
+            optimizer = Adam(encoder_model.parameters(), lr=lrr)
+            scheduler = LinearWarmupCosineAnnealingLR(
+                optimizer=optimizer,
+                warmup_epochs=100,
+                max_epochs=1000)
+
+            with tqdm(total=1000, desc='(T)') as pbar:
+                for epoch in range(1, 1001):
+                    loss = train(encoder_model, contrast_model, data, optimizer)
+                    scheduler.step()
+                    pbar.set_postfix({'loss': loss})
+                    pbar.update()
+            print('Pretrain finished')
+            
             for split_n in range(20):                          
                 mlp = MLP([dataset.num_node_features, 64, dataset.num_classes], dropout=0.5).to(device)
                 mlp_optimizer = torch.optim.Adam(mlp.parameters(), lr=0.01, weight_decay=5e-4)
-                
-                aug1 = A.Compose([A.EdgeRemoving(pe=pe1*0.1), A.FeatureMasking(pf=pf1*0.1)])
-                aug2 = A.Compose([A.EdgeRemoving(pe=pe1*0.1), A.FeatureMasking(pf=pf1*0.1)])
-
-                gconv = GConv(input_dim=dataset.num_features, hidden_dim=128).to(device) # change hidden-dim
-                encoder_model = Encoder(encoder=gconv, augmentor=(aug1, aug2)).to(device)
-                contrast_model = WithinEmbedContrast(loss=L.BarlowTwins()).to(device)
-
-                optimizer = Adam(encoder_model.parameters(), lr=5e-4)
-                scheduler = LinearWarmupCosineAnnealingLR(
-                    optimizer=optimizer,
-                    warmup_epochs=100,
-                    max_epochs=1000)
-
-                with tqdm(total=1000, desc='(T)') as pbar:
-                    for epoch in range(1, 1001):
-                        loss = train(encoder_model, contrast_model, data, optimizer)
-                        scheduler.step()
-                        pbar.set_postfix({'loss': loss})
-                        pbar.update()
-                
-                print('Pretrain finished')
+                               
                 test_result, y_soft = test(encoder_model, data, split_n)
                 print(f'(E): Best test F1Mi={test_result["micro_f1"]:.4f}, Acc={test_result["acc"]:.4f}, F1Ma={test_result["macro_f1"]:.4f}')
                 test_acc_sum += test_result["acc"]
                 #acc_teacher_split += test_result["acc"]
                 #acc_teacher.append(test_result["acc"])
                 
-                del gconv
                 del mlp
+            del gconv
         
         average_for_splits = test_acc_sum/(20.0*times_for_average)
         print('Finish training with acc= ', average_for_splits)
@@ -254,17 +272,19 @@ def main():
             best_pe1 = pe1
             best_pf1 = pf1
     
+    print(dataset_name)
     print(best_teacher_ave)
     print('param = ', best_pe1*0.1, '  ', best_pf1*0.1)
     
     with open('./hyperparam.txt', 'a') as f:
-        f.write('Dataset: WikiCS \n')
+        f.write('Dataset: %s \n' % dataset_name)
+        f.write('Times: %d' % args.n_begin)
         f.write('Times for average = %d\n' % times_for_average)
         f.write('best_teacher_test_acc: %f\n' % best_teacher_ave)
         f.write('pe1=%f, pf1=%f \n' %(best_pe1*0.1, best_pf1*0.1))
     
 
 if __name__ == '__main__':
-    dataset_name = 'Amazon-CS'
+    dataset_name = 'Coauthor-Physics'
     data, dataset = read_data(dataset_name)
     main()

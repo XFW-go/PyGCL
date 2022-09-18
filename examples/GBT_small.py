@@ -22,12 +22,13 @@ from torch_geometric.nn import GCN, MLP
 parser = argparse.ArgumentParser()
 parser.add_argument('--lamb', type=float, default=0.0,
                     help='Balances loss from hard labels and teacher outputs')
+parser.add_argument('--gpu',type=int, default=0,help='which gpu')
 args = parser.parse_args()
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:%d' % args.gpu if torch.cuda.is_available() else 'cpu')
 
-times_for_average = 10
+times_for_average = 5
 
-dataset_name = 'PubMed'
+dataset_name = 'CiteSeer'
 path = osp.join(osp.expanduser('~'), 'datasets')
 dataset = Planetoid(path, name=dataset_name, transform=T.NormalizeFeatures())
 data = dataset[0].to(device)
@@ -115,7 +116,6 @@ def test_student(mlp):
 # ------------ For students 
 
 def main():
-    device = torch.device('cuda')
     acc_teacher = []
     acc_student = []
     std_teacher = 0

@@ -1,0 +1,80 @@
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.869534
+pe1=0.200000, pf1=0.200000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.868559
+pe1=0.300000, pf1=0.100000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.862507
+pe1=0.300000, pf1=0.000000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.872725
+pe1=0.400000, pf1=0.500000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.870257
+pe1=0.200000, pf1=0.300000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.870811
+pe1=0.300000, pf1=0.400000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.872844
+pe1=0.500000, pf1=0.500000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.922552
+pe1=0.300000, pf1=0.500000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.920667
+pe1=0.000000, pf1=0.500000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.921895
+pe1=0.200000, pf1=0.500000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.922522
+pe1=0.500000, pf1=0.500000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.920598
+pe1=0.000000, pf1=0.500000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.921408
+pe1=0.200000, pf1=0.200000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.922649
+pe1=0.400000, pf1=0.100000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.779517
+pe1=0.500000, pf1=0.000000 
+Dataset: WikiCS 
+Times for average = 3
+best_teacher_test_acc: 0.923347
+pe1=0.500000, pf1=0.100000 
+Dataset: Coauthor-Physics 
+Times: 0Times for average = 3
+best_teacher_test_acc: 0.954807
+pe1=0.000000, pf1=0.500000 
+Dataset: Coauthor-Physics 
+Times: 2Times for average = 3
+best_teacher_test_acc: 0.954885
+pe1=0.300000, pf1=0.400000 
+Dataset: Coauthor-Physics 
+Times: 1Times for average = 3
+best_teacher_test_acc: 0.954947
+pe1=0.200000, pf1=0.500000 
+Dataset: Coauthor-Physics 
+Times: 3Times for average = 3
+best_teacher_test_acc: 0.955220
+pe1=0.500000, pf1=0.500000 

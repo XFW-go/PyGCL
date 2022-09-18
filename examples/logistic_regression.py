@@ -27,7 +27,7 @@ class LREvaluator(BaseEvaluator):
         self.weight_decay = weight_decay
         self.test_interval = test_interval
 
-    def evaluate(self, x: torch.FloatTensor, y: torch.LongTensor, split: dict):
+    def evaluate(self, x: torch.FloatTensor, y: torch.LongTensor, split: dict, model_path: str):
         device = x.device
         x = x.detach().to(device)
         input_dim = x.size()[1]
@@ -76,11 +76,13 @@ class LREvaluator(BaseEvaluator):
                         best_test_macro = test_macro
                         best_test_acc = test_acc
                         best_epoch = epoch
+                        torch.save(classifier.state_dict(), model_path + 'GBT_classifier_best.pth')
 
                     pbar.set_postfix({'best test F1Mi': best_test_micro, 'F1Ma': best_test_macro})
                     pbar.update(self.test_interval)
         
         print('LREvaluator FINISH HERE')
+        classifier.load_state_dict(torch.load(model_path + 'GBT_classifier_best.pth'))
         y_soft = output_fn(classifier(x))
         
         dict_out = {
