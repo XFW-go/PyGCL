@@ -208,7 +208,9 @@ def get_ogb_split(path, name):
         train_idx = split_idx['train']
         valid_idx = split_idx['valid']
         test_idx = split_idx['test']
-        x, edge_index, y = data.x, data.adj_t, data.y.view(-1)
+        # ---------Some modifications----------#
+        x, edge_index, y = data.x, torch.stack([data.adj_t.storage.row(), data.adj_t.storage.col()], dim=0), data.y.view(-1)
+        # -------------------------------------#
 
     elif name == "ogbn-products":
         dataset = PygNodePropPredDataset(name='ogbn-products',

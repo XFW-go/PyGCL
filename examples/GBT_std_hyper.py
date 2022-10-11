@@ -17,6 +17,7 @@ from ogb.nodeproppred import PygNodePropPredDataset
 from pl_bolts.optimizers import LinearWarmupCosineAnnealingLR
 from dataset import get_dataset_split, get_ogb_split
 from dataset_cpf import get_dataset_benchmark
+from torch_geometric.utils import to_undirected
 
 # glnn part
 import argparse
@@ -42,7 +43,8 @@ data = dict()
 def read_data(dataset_name):
     path = osp.join(osp.expanduser('~'), 'datasets', dataset_name)
     if dataset_name.startswith('ogbn'):
-        data = get_ogb_split(path, args.dataset)
+        data = get_ogb_split(path, dataset_name)
+        data.edge_index = to_undirected(data.edge_index, data.num_nodes)
     elif dataset_name == 'Amazon-CS':
         data_name = 'amazon_electronics_computers'
         print('--- Loading data according to CPF')
@@ -168,10 +170,18 @@ def main():
         hidden=256 #128
         lrr=1e-5
         num_classes=5
-    else:
-        if dataset_name=='PubMed': num_classes=3
-        elif dataset_name=='Cora': num_classes=7
-        elif dataset_name=='CiteSeer': num_classes=6
+    elif dataset_name=='PubMed': 
+        num_classes=3
+    elif dataset_name=='Cora': 
+        num_classes=7
+    elif dataset_name=='CiteSeer':
+        num_classes=6
+    elif dataset_name=='ogbn-arxiv':
+        lrr=1e-3
+        num_classes=40
+    elif dataset_name=='ogbn-products':
+        lrr=1e-3
+        num_classes=47
     
     for n_exp in range(9):
         x = args.n_begin*9+n_exp
@@ -229,9 +239,9 @@ def main():
     
 
 if __name__ == '__main__':
-    dataset_name = 'Amazon-Photo'
+    dataset_name = 'ogbn-arxiv'
     data = read_data(dataset_name)
     os.system('mkdir ./output/GBT/%s'%dataset_name)
-    os.system('mkdir ./output/GBT/%s/0916-%d'%(dataset_name, args.n_begin))
-    model_path = './output/GBT/%s/0916-%d/'%(dataset_name, args.n_begin)
+    os.system('mkdir ./output/GBT/%s/0921-%d'%(dataset_name, args.n_begin))
+    model_path = './output/GBT/%s/0921-%d/'%(dataset_name, args.n_begin)
     main()

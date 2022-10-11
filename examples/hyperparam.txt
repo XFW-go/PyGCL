@@ -206,3 +206,19 @@ Dataset: Amazon-Photo
 Times: 3Times for average = 8
 best_teacher_test_acc: 0.916749
 pe1=0.500000, pf1=0.200000 
+Dataset: ogbn-arxiv 
+Times: 1Times for average = 8
+best_teacher_test_acc: 0.694769
+pe1=0.100000, pf1=0.500000 
+Dataset: ogbn-arxiv 
+Times: 2Times for average = 8
+best_teacher_test_acc: 0.694785
+pe1=0.300000, pf1=0.500000 
+Dataset: ogbn-arxiv 
+Times: 0Times for average = 8
+best_teacher_test_acc: 0.692781
+pe1=0.100000, pf1=0.000000 
+Dataset: ogbn-arxiv 
+Times: 3Times for average = 8
+best_teacher_test_acc: 0.696338
+pe1=0.500000, pf1=0.500000 

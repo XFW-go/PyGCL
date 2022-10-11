@@ -17,6 +17,8 @@ from ogb.nodeproppred import PygNodePropPredDataset
 from pl_bolts.optimizers import LinearWarmupCosineAnnealingLR
 from dataset import get_dataset_split, get_ogb_split
 from dataset_cpf import get_dataset_benchmark
+from torch_geometric.data import Data
+from torch_geometric.utils import to_undirected
 
 # glnn part
 import argparse
@@ -32,6 +34,7 @@ torch.set_num_threads(1)
 device = torch.device('cuda:%d' % args.gpu if torch.cuda.is_available() else 'cpu')
 
 times_for_average = 5
+mlp_hidden = 4
 dataset_name = ''
 dataset = ''
 data = dict()
@@ -39,11 +42,14 @@ data = dict()
 def read_data(dataset_name):
     path = osp.join(osp.expanduser('~'), 'datasets', dataset_name)
     if dataset_name.startswith('ogbn'):
-        data = get_ogb_split(path, args.dataset)
+        data = get_ogb_split(path, dataset_name)
+        data.edge_index = to_undirected(data.edge_index, data.num_nodes)
     elif dataset_name == 'Amazon-CS':
         data_name = 'amazon_electronics_computers'
         print('--- Loading data according to CPF')
         data = get_dataset_benchmark(path, data_name, 20, 30)
+        print(data.edge_index.shape)
+        print(data.edge_index.type)
     elif dataset_name =='Amazon-Photo':
         data_name = 'amazon_electronics_photo'
         print('--- Loading data according to CPF')
@@ -67,6 +73,26 @@ class GConv(torch.nn.Module):
         z = self.bn(z)
         z = self.act(z)
         z = self.conv2(z, edge_index, edge_weight)
+        return z
+
+class GConv2(torch.nn.Module):
+    def __init__(self, input_dim, hidden_dim):
+        super(GConv, self).__init__()
+        self.act = torch.nn.PReLU()
+        self.bn1 = torch.nn.BatchNorm1d(hidden_dim, momentum=0.01)
+        self.bn2 = torch.nn.BatchNorm1d(hidden_dim, momentum=0.01)
+        self.conv1 = GCNConv(input_dim, hidden_dim, cached=False)
+        self.conv2 = GCNConv(hidden_dim, hidden_dim, cached=False)
+        self.conv3 = GCNConv(hidden_dim, hidden_dim, cached=False)
+
+    def forward(self, x, edge_index, edge_weight=None):
+        z = self.conv1(x, edge_index, edge_weight)
+        z = self.bn1(z)
+        z = self.act(z)
+        z = self.conv2(z, edge_index, edge_weight)
+        z = self.bn2(z)
+        z = self.act(z)
+        z = self.conv3(z, edge_index, edge_weight)
         return z
 
 
@@ -137,56 +163,35 @@ def main():
     acc_student = []
     std_teacher = 0
     std_student = 0
-    hidden = 256
-    lrr = 1e-4
-    num_classes=1
+    lrr, hidden, my_pe, my_pf, num_classes = [1e-4, 256, 0.5, 0.1, 1]
     if dataset_name=='WikiCS':
-        lr=5e-4
-        my_pe=0.5
-        my_pf=0.0
-        num_classes=10
-    elif dataset_name=='Amazon-CS': # 0.2 0.2
-        lrr=5e-4
-        hidden=256
-        my_pe=0.0 #0.1
-        my_pf=0.3 #0.3
-        num_classes=10
+        lrr, hidden, my_pe, my_pf, num_classes=[5e-4, 256, 0.5, 0.0, 10]
+    elif dataset_name=='Amazon-CS': # 0.2 0.2 / 0.1 0.3
+        lrr, hidden, my_pe, my_pf, num_classes = [5e-4, 256, 0.0, 0.3, 10]
     elif dataset_name=='Amazon-Photo':
-        hidden=256
-        my_pe=0.5
-        my_pf=0.1
-        num_classes=8
+        lrr, hidden, my_pe, my_pf, num_classes = [1e-4, 256, 0.5, 0.1, 8]
     elif dataset_name=='Coauthor-CS':
-        lrr=1e-5
-        my_pe=0.5
-        my_pf=0.0
-        num_classes=15
-    elif dataset_name=='Coauthor-Phy':
-        hidden=256
-        lrr=1e-5
-        my_pe=0.5 #0.0 #0.4
-        my_pf=0.2 #0.5 #0.2
-        num_classes=5
+        lrr, hidden, my_pe, my_pf, num_classes = [1e-5, 256, 0.5, 0.0, 15]
+    elif dataset_name=='Coauthor-Phy': # 0.0 0.5 / 0.4 0.2
+        lrr, hidden, my_pe, my_pf, num_classes = [1e-5, 256, 0.5, 0.2, 5]
     elif dataset_name=='Cora': 
-        num_classes=7
-        my_pe=0.3
-        my_pf=0.4
+        lrr, hidden, my_pe, my_pf, num_classes = [1e-4, 256, 0.3, 0.4, 7]
     elif dataset_name=='PubMed':
-        num_classes=3
-        my_pe=0.1
-        my_pf=0.5
+        lrr, hidden, my_pe, my_pf, num_classes = [1e-4, 256, 0.1, 0.5, 3]
     elif dataset_name=='CiteSeer':
-        num_classes=6
-        my_pe=0.5
-        my_pf=0.5
-    elif dataset_name=='ogb':
-        num_classes=10
+        lrr, hidden, my_pe, my_pf, num_classes = [1e-4, 256, 0.5, 0.5, 6]
+    elif dataset_name=='ogbn-arxiv':
+        lrr, hidden, my_pe, my_pf, num_classes = [1e-3, 256, 0.3, 0.0, 40] #0.5 0.5?
+    elif dataset_name=='ogbn-products':
+        lrr=1e-3
+        num_classes=47
         
     for n in range(times_for_average): 
         test_teacher = 0
         test_stud = 0
-        mlp = MLP([data.x.shape[1], 64, num_classes], dropout=0.5).to(device)
-        mlp_optimizer = torch.optim.Adam(mlp.parameters(), lr=0.01, weight_decay=5e-4)
+        #mlp = MLP([data.x.shape[1], 256, 256, num_classes], dropout=0.5).to(device)
+        mlp = MLP(in_channels=data.x.shape[1], hidden_channels = mlp_hidden, out_channels=num_classes, num_layers=3, dropout=0.2).to(device)
+        mlp_optimizer = torch.optim.Adam(mlp.parameters(), lr=0.01, weight_decay=0)
         
         aug1 = A.Compose([A.EdgeRemoving(pe=my_pe), A.FeatureMasking(pf=my_pf)])
         aug2 = A.Compose([A.EdgeRemoving(pe=my_pe), A.FeatureMasking(pf=my_pf)])
@@ -198,15 +203,17 @@ def main():
         optimizer = Adam(encoder_model.parameters(), lr=lrr)
         scheduler = LinearWarmupCosineAnnealingLR(
             optimizer=optimizer,
-            warmup_epochs=10,
+            warmup_epochs=100,
             max_epochs=1000)
-
+        
         with tqdm(total=1000, desc='(T)') as pbar:
             for epoch in range(1, 1001):
                 loss = train(encoder_model, contrast_model, data, optimizer)
                 scheduler.step()
                 pbar.set_postfix({'loss': loss})
                 pbar.update()
+        loss = train(encoder_model, contrast_model, data, optimizer)
+        scheduler.step()
         print('Pretrain finished')
            
         test_result, y_soft = test(encoder_model, data)
@@ -217,9 +224,9 @@ def main():
         print('Training Student MLP:')
         best_val_acc = -1
         best_test_acc = -1
-        for epoch in range(1, 501):
+        for epoch in range(1, 2001):
             loss = train_student(y_soft, data, mlp, mlp_optimizer)
-            if epoch % 20 == 0:
+            if epoch % 100 == 0:
                 train_acc, val_acc, test_acc = test_student(mlp)
                 print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Train: {train_acc:.4f}, '
                       f'Val: {val_acc:.4f}, Test: {test_acc:.4f}')
@@ -244,16 +251,16 @@ def main():
     std_student = sqrt(std_student/(times_for_average))
     
     print(dataset_name)
-    print('MLP hidden= 64')
+    print('Layer=2   MLP hidden=%d'%mlp_hidden)
     print('training finished for: ', times_for_average, ' times')
     print('average teacher acc: ', teacher_average, ', and std: ', std_teacher)
     print('average student acc: ', student_average, ', and std: ', std_student)
     
 
 if __name__ == '__main__':
-    dataset_name = 'Coauthor-CS'
+    dataset_name = 'Amazon-CS'
     data = read_data(dataset_name)
     os.system('mkdir ./output/GBT/%s'%dataset_name)
-    os.system('mkdir ./output/GBT/%s/0915Tuned'%(dataset_name))
-    model_path = './output/GBT/%s/0915Tuned/'%(dataset_name)
+    os.system('mkdir ./output/GBT/%s/0926'%(dataset_name))
+    model_path = './output/GBT/%s/0926/'%(dataset_name)
     main()
