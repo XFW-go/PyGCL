@@ -38,7 +38,7 @@ We can run the following command to start distillation for GBT and mlp students:
 ```
 python GBT_distill_embed_std.py --gpu 0
 ```
-Important files: examples/logistic_regression.py
+Important files: examples/logistic_regression.py examples/GBT_*.py
 
 # Install
 
