@@ -33,10 +33,13 @@ Graph Contrastive Learning (GCL) establishes a new paradigm for learning graph r
 
 👉 For a general introduction of GCL, please refer to our [paper](https://arxiv.org/abs/2109.01116) and [blog](https://sxkdz.github.io/research/GraphCL/). Also, this [repo](https://github.com/SXKDZ/awesome-self-supervised-learning-for-graphs) tracks newly published GCL papers.
 
+# Easy Training
 We can run the following command to start distillation for GBT and mlp students:
 ```
 python GBT_distill_embed_std.py --gpu 0
 ```
+Important files: examples/logistic_regression.py
+
 # Install
 
 ## Prerequisites
